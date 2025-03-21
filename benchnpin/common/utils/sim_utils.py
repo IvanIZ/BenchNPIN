@@ -161,13 +161,13 @@ def generate_sim_obs(space, obstacles: List[dict], density, color=None):
         for obs in obstacles
     ]
 
-def generate_sim_cubes(space, cubes: List[dict], density):
+def generate_sim_boxes(space, boxes: List[dict], density):
     return [
         create_polygon(
-            space, (cube['vertices'] - np.array(cube['position'])).tolist(),
-            *cube['position'], density=density, heading=cube['heading'], label='cube', idx=cube['idx'], radius=0, color=cube['color']
+            space, (box['vertices'] - np.array(box['position'])).tolist(),
+            *box['position'], density=density, heading=box['heading'], label='box', idx=box['idx'], radius=0, color=box['color']
         )
-        for cube in cubes
+        for box in boxes
     ]
 
 def generate_sim_maze(space, maze_walls):
