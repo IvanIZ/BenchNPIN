@@ -566,6 +566,13 @@ class BoxDeliveryEnv(gym.Env):
             if not any(query.shape.label == 'receptacle' for query in query_info):
                 return False
         return True
+    
+    def box_position_in_obstacle(self, box_vertices):
+        for vertex in box_vertices:
+            query_info = self.space.point_query(vertex, 0, pymunk.ShapeFilter())
+            if any(query.shape.label in ['wall', 'divider', 'column', 'corner'] for query in query_info):
+                return True
+        return False
 
     def reset(self, seed=None, options=None):
         """Resets the environment to the initial state and returns the initial observation."""
@@ -984,6 +991,18 @@ class BoxDeliveryEnv(gym.Env):
         sim_steps = 0
         done = False
         while not done:
+            # check if any box is stuck in a wall
+            for box in self.boxes:
+                box_vertices = [box.body.local_to_world(v) for v in box.get_vertices()]
+                if self.box_position_in_obstacle(box_vertices):
+                    # move to nearest free space
+                    box_position = box.body.position
+                    pixel_i, pixel_j = self.position_to_pixel_indices(box_position.x, box_position.y, self.configuration_space.shape)
+                    nearest_i, nearest_j = self.closest_valid_cspace_indices(pixel_i, pixel_j)
+                    new_x, new_y = self.pixel_indices_to_position(nearest_i, nearest_j, self.configuration_space.shape)
+                    box.body.position = (new_x, new_y)
+                    box.body.velocity = (0, 0)
+                    
             # check whether anything moved since last step
             positions = []
             for poly in self.boxes + [self.robot]:
@@ -1078,6 +1097,12 @@ class BoxDeliveryEnv(gym.Env):
             int(2 * np.ceil((self.room_width * self.local_map_pixels_per_meter + self.local_map_pixel_width * np.sqrt(2)) / 2)),
             int(2 * np.ceil((self.room_length * self.local_map_pixels_per_meter + self.local_map_pixel_width * np.sqrt(2)) / 2))
         ), dtype=np.float32)
+    
+    def create_padded_room_ones(self):
+        return np.ones((
+            int(2 * np.ceil((self.room_width * self.local_map_pixels_per_meter + self.local_map_pixel_width * np.sqrt(2)) / 2)),
+            int(2 * np.ceil((self.room_length * self.local_map_pixels_per_meter + self.local_map_pixel_width * np.sqrt(2)) / 2))
+        ), dtype=np.float32)
 
     def create_global_shortest_path_to_receptacle_map(self):
         global_map = self.create_padded_room_zeros() + np.inf
@@ -1108,7 +1133,8 @@ class BoxDeliveryEnv(gym.Env):
         Obstacles are dilated based on the robot's radius to define a collision-free space
         """
 
-        obstacle_map = self.create_padded_room_zeros()
+        # obstacle_map = self.create_padded_room_zeros()
+        obstacle_map = self.create_padded_room_ones()
         small_obstacle_map = np.zeros((self.local_map_pixel_width+20, self.local_map_pixel_width+20), dtype=np.float32)
 
         for poly in self.boundaries:
