@@ -293,7 +293,7 @@ class BoxDeliverySAM(BasePolicy):
                 state, _ = env.reset()
                 episode += 1
                 if truncated:
-                    logging.info(f"Episode {episode} truncated. {info['cumulative_cubes']} in goal. Resetting environment...")
+                    logging.info(f"Episode {episode} truncated. {info['cumulative_boxes']} in goal. Resetting environment...")
                 else:
                     logging.info(f"Episode {episode} completed. Resetting environment...")
             
@@ -325,7 +325,7 @@ class BoxDeliverySAM(BasePolicy):
                 train_summary_writer.add_scalar('episodes', episode, timestep + 1)
                 train_summary_writer.add_scalar('eta_hours', eta_seconds / 3600, timestep + 1)
 
-                for name in ['cumulative_cubes', 'cumulative_distance', 'cumulative_reward']:
+                for name in ['cumulative_boxes', 'cumulative_distance', 'cumulative_reward']:
                     train_summary_writer.add_scalar(name, info[name], timestep + 1)
 
             ################################################################################
